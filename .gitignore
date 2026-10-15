@@ -1,0 +1,6 @@
+.DS_Store
+
+.session_tmps/
+output/
+
+node_modules/
