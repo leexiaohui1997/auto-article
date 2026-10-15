@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import dayjs from 'dayjs'
 
 enum LogType {
+  FUNC,
   TASK_BEGIN,
   TASK_FINISH,
   INFO,
@@ -27,6 +28,8 @@ function getLogColor(type: LogType) {
     case LogType.TASK_BEGIN:
     case LogType.TASK_FINISH:
       return chalk.blue.bind(chalk)
+    case LogType.FUNC:
+      return chalk.cyan.bind(chalk)
     case LogType.BOLD:
       return chalk.white.bind(chalk)
     case LogType.WARN:
@@ -67,6 +70,7 @@ function createOutput(type: LogType) {
 }
 
 export const info = createOutput(LogType.INFO)
+export const func = createOutput(LogType.FUNC)
 export const bold = createOutput(LogType.BOLD)
 export const warn = createOutput(LogType.WARN)
 export const error = createOutput(LogType.ERROR)

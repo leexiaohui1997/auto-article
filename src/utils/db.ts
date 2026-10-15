@@ -6,17 +6,14 @@ import { PrismaClient } from '@prisma/client'
 import { pkgRoot } from './env.js'
 import { info, success } from './logger.js'
 
+export const DATABASE_URL = `file:${path.resolve(pkgRoot, process.env.DATABASE_URL || '.auto-article/data.db')}`
+
 let prismaClient: PrismaClient | undefined
 
 export async function getDB() {
   if (!prismaClient) {
-    const dbUrl = process.env.DATABASE_URL
-    if (!dbUrl) {
-      throw new Error('未配置数据库路径：请在仓库根 .env 中设置 DATABASE_URL')
-    }
-
     prismaClient = new PrismaClient({
-      adapter: new PrismaLibSql({ url: `file:${path.resolve(pkgRoot, dbUrl)}` }),
+      adapter: new PrismaLibSql({ url: DATABASE_URL }),
     })
 
     await prismaClient.$connect()

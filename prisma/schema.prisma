@@ -36,13 +36,14 @@ model ShareLink {
 
 // 文件夹表
 model ShareLinkFolder {
-  id       String  @id @default(cuid())
-  linkId   String
-  parentId String?
-  url      String
-  name     String
-  count    Int
-  status   Status  @default(PENDING)
+  id        String   @id @default(cuid())
+  linkId    String
+  parentId  String?
+  url       String
+  name      String
+  count     Int
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
 
   link    ShareLink         @relation(fields: [linkId], references: [id], onDelete: Cascade)
   parent  ShareLinkFolder?  @relation("ShareLinkFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
@@ -52,14 +53,15 @@ model ShareLinkFolder {
 
 // 文件表
 model ShareLinkFile {
-  id       String  @id @default(cuid())
-  linkId   String
-  folderId String?
-  url      String
-  name     String
-  size     Int
-  ext      String
-  status   Status  @default(PENDING)
+  id        String   @id @default(cuid())
+  linkId    String
+  folderId  String?
+  url       String
+  name      String
+  size      Int
+  ext       String
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
 
   link   ShareLink        @relation(fields: [linkId], references: [id], onDelete: Cascade)
   folder ShareLinkFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
