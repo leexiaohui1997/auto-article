@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// 状态
+enum Status {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+// 分享链接类型
+enum LinkType {
+  // 夸克网盘
+  QUARK
+  // 百度网盘
+  BAIDU
+}
+
+// 分享链接表
+model ShareLink {
+  id        String   @id @default(cuid())
+  url       String
+  type      LinkType
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+
+  folders ShareLinkFolder[]
+  files   ShareLinkFile[]
+}
+
+// 文件夹表
+model ShareLinkFolder {
+  id       String  @id @default(cuid())
+  linkId   String
+  parentId String?
+  url      String
+  name     String
+  count    Int
+  status   Status  @default(PENDING)
+
+  link    ShareLink         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  parent  ShareLinkFolder?  @relation("ShareLinkFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  folders ShareLinkFolder[] @relation("ShareLinkFolderTree")
+  files   ShareLinkFile[]
+}
+
+// 文件表
+model ShareLinkFile {
+  id       String  @id @default(cuid())
+  linkId   String
+  folderId String?
+  url      String
+  name     String
+  size     Int
+  ext      String
+  status   Status  @default(PENDING)
+
+  link   ShareLink        @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  folder ShareLinkFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+}
+
+// 书籍表
+model Book {
+  id           String    @id @default(cuid())
+  fileId       String
+  name         String
+  score        Decimal
+  reason       String
+  status       Status    @default(PENDING)
+  createdAt    DateTime  @default(now())
+  doneAt       DateTime?
+  processingAt DateTime?
+}

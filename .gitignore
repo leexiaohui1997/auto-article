@@ -3,4 +3,9 @@
 .session_tmps/
 output/
 
+dist/
 node_modules/
+.auto-article/
+.env
+.env.*
+!.env.example
