@@ -4,6 +4,7 @@ import { getDB } from '../utils/db.js'
 import { NoLinkError } from '../utils/error.js'
 import { func, info } from '../utils/logger.js'
 
+import { ai } from './ai/dispatch.js'
 import { scanQuarkFolder, scanQuarkLink } from './context/quark.js'
 import { BOOK_COUNT_PER_LOOP, getPendingBook, getPendingFiles } from './db.js'
 
@@ -17,21 +18,31 @@ export async function runMain() {
 
 export async function addBooks() {
   const collected: ShareLinkFile[] = []
-  while (true) {
-    const pendingFiles = await getPendingFiles({
-      limit: BOOK_COUNT_PER_LOOP - collected.length,
-      excludeIds: collected.map((item) => item.id),
-    })
-    collected.push(...pendingFiles)
-    if (collected.length >= BOOK_COUNT_PER_LOOP) {
-      break
+  try {
+    while (true) {
+      const pendingFiles = await getPendingFiles({
+        limit: BOOK_COUNT_PER_LOOP - collected.length,
+        excludeIds: collected.map((item) => item.id),
+      })
+      collected.push(...pendingFiles)
+      if (collected.length >= BOOK_COUNT_PER_LOOP) {
+        break
+      }
+      await scanFolder()
     }
-    await scanFolder()
+  } catch (err) {
+    if (!(err instanceof NoLinkError)) {
+      throw err
+    }
+
+    if (!collected.length) {
+      throw err
+    }
   }
 
-  // TODO
-  console.log(collected)
-  process.exit(1)
+  for (const file of collected) {
+    await ai.getScore(file)
+  }
 }
 
 export async function scanFolder() {

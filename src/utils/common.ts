@@ -25,3 +25,7 @@ export function parseSize(text: string): number {
   const normalized = text.trim().replace(/^([\d.]+)\s*([KMG])$/i, '$1$2B')
   return bytes.parse(normalized) ?? 0
 }
+
+export function summary(content: string) {
+  return (content.length <= 20 ? content : `${content.slice(0, 20)}...`).replace(/\r?\n/g, ' ')
+}
