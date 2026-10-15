@@ -1,5 +1,6 @@
 .DS_Store
 
+.workbuddy/
 .session_tmps/
 output/
 

@@ -15,7 +15,7 @@ export default class AiQianWenEngine extends AiEngineBase {
     await Promise.all([
       (async () => {
         await page
-          .locator('#new-nav-tab-wrapper button[id="radix-:r53:"]')
+          .locator('#new-nav-tab-wrapper img[src*="imgextra"]')
           .first()
           .waitFor({ state: 'visible', timeout: 0 })
         isLogined = true
@@ -84,12 +84,12 @@ export default class AiQianWenEngine extends AiEngineBase {
         await page
           .locator('button[aria-label="停止回答"]')
           .first()
-          .waitFor({ state: 'visible', timeout: 3000 })
+          .waitFor({ state: 'visible', timeout: 0 })
         success('点击了发送按钮')
         await page
           .locator('button[data-session-switch-target="send-query"][aria-label="发送消息"]')
           .first()
-          .waitFor({ state: 'visible', timeout: 3000 })
+          .waitFor({ state: 'visible', timeout: 0 })
         success('千问回答完毕')
       })(),
     ])
