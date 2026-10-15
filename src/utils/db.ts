@@ -4,10 +4,11 @@ import { PrismaLibSql } from '@prisma/adapter-libsql'
 import { PrismaClient } from '@prisma/client'
 
 import { pkgRoot } from './env.js'
+import { info, success } from './logger.js'
 
-let prismaClient: PrismaClient
+let prismaClient: PrismaClient | undefined
 
-export function getDB() {
+export async function getDB() {
   if (!prismaClient) {
     const dbUrl = process.env.DATABASE_URL
     if (!dbUrl) {
@@ -17,7 +18,21 @@ export function getDB() {
     prismaClient = new PrismaClient({
       adapter: new PrismaLibSql({ url: `file:${path.resolve(pkgRoot, dbUrl)}` }),
     })
+
+    await prismaClient.$connect()
+    success('数据库已连接')
+    process.once('SIGINT', closeDB)
+    process.once('SIGTERM', closeDB)
+    process.once('beforeExit', closeDB)
   }
 
   return prismaClient
+}
+
+export async function closeDB() {
+  if (prismaClient) {
+    await prismaClient.$disconnect()
+    prismaClient = undefined
+    info('数据库已关闭')
+  }
 }
