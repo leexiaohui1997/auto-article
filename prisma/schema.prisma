@@ -74,6 +74,7 @@ model Book {
   name         String
   score        Decimal
   reason       String
+  sopResult    String
   status       Status    @default(PENDING)
   createdAt    DateTime  @default(now())
   doneAt       DateTime?

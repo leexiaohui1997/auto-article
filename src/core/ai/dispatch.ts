@@ -1,17 +1,25 @@
 import { ShareLinkFile } from '@prisma/client'
 
-import { AppError } from '../../utils/error.js'
-import { func } from '../../utils/logger.js'
-import { renderTemplate } from '../template/index.js'
+import { getErrorMsg } from '../../utils/common.js'
+import { AiResponseError, AppError } from '../../utils/error.js'
+import { func, success } from '../../utils/logger.js'
+import { renderTemplate, renderToAttach } from '../template/index.js'
 
 import AiQianWenEngine from './engines/qianwen.js'
-import { checkIsNormalResponse, checkIsValidResponse } from './helper.js'
-import { AiResponse } from './types.js'
+import { checkIsNormalResponse, checkIsSelectionSOPResult, checkIsValidResponse } from './helper.js'
+import { AiNormalResponse, AiResponse, SelectionSOPResult } from './types.js'
 
 export class AiDispatch {
   engine = new AiQianWenEngine()
 
-  async ask(question: string) {
+  // eslint-disable-next-line complexity
+  async ask<T = any>(
+    question: string,
+    opts?: {
+      attaches?: File[]
+      onResult?: (res: AiNormalResponse<T>) => unknown
+    },
+  ): Promise<AiNormalResponse<T>> {
     await this.engine.ensureLogin()
     await this.engine.createContext()
     await this.engine.input(await renderTemplate('begin'))
@@ -36,6 +44,9 @@ export class AiDispatch {
       }
 
       if (resJson.type === 'response' && resJson.message === 'OK' && !sendedQuestion) {
+        if (opts?.attaches?.length) {
+          await this.engine.inputAttach(opts.attaches)
+        }
         await this.engine.input(question)
         await this.engine.send()
         sendedQuestion = true
@@ -49,7 +60,19 @@ export class AiDispatch {
       }
 
       if (checkIsNormalResponse(resJson)) {
-        return resJson.message
+        if (opts?.onResult) {
+          try {
+            await opts.onResult(resJson)
+          } catch (err) {
+            if (err instanceof AiResponseError) {
+              await this.engine.input(getErrorMsg(err))
+              await this.engine.send()
+              continue
+            }
+            throw err
+          }
+        }
+        return resJson
       }
 
       await this.engine.input('暂不支持工具调用')
@@ -59,9 +82,19 @@ export class AiDispatch {
 
   async getScore(file: ShareLinkFile) {
     func(`为 ${file.name} 打分`)
-    const anwser = await this.ask('1+1')
-    console.log({ anwser })
-    process.exit(1)
+    const anwser = await this.ask<SelectionSOPResult>(
+      `请遵照附件指南为此书做评估报告：${file.name}`,
+      {
+        attaches: [await renderToAttach('selection-sop', '选书评估 SOP.md')],
+        onResult: async (res) => {
+          if (!checkIsSelectionSOPResult(res.data)) {
+            throw new AiResponseError('你提供的评估结果不符合文档要求的结构规范，请调整后重新回复')
+          }
+          success('评估结果已通过数据结构校验')
+        },
+      },
+    )
+    return anwser.data!
   }
 }
 

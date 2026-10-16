@@ -4,6 +4,7 @@ import path from 'node:path'
 import ejs from 'ejs'
 
 import { pkgRoot } from '../../utils/env.js'
+import { attachToFile } from '../modules/attach.js'
 
 export const TEMPLATE_DIR = path.resolve(pkgRoot, process.env.TEMPLATE_DIR || 'templates')
 export const TEMPLATE_EXT = (process.env.TEMPLATE_EXT || 'md')
@@ -33,4 +34,16 @@ export async function renderTemplate(name: string) {
     async: true,
   }
   return await ejs.renderFile(filename, {}, options)
+}
+
+export async function renderToAttach(
+  name: string,
+  filename = path.basename(resolveFileName(name)),
+): Promise<File> {
+  const content = await renderTemplate(name)
+  return await attachToFile({
+    type: 'markdown',
+    filename,
+    content,
+  })
 }

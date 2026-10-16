@@ -7,6 +7,8 @@ let isLogined = false
 const QIANWEN_URL = 'https://www.qianwen.com/'
 const getQianWenPage = () => getPage('qianwen')
 
+const THINK_MODE = false
+
 export default class AiQianWenEngine extends AiEngineBase {
   async ensureLogin(): Promise<void> {
     if (isLogined) return
@@ -41,15 +43,17 @@ export default class AiQianWenEngine extends AiEngineBase {
       success('打开新会话')
     }
 
-    const trigger = page.locator('button[aria-label="快速"]').first()
-    await trigger.waitFor({ state: 'visible', timeout: 3000 })
-    await trigger.click()
-    const item = page
-      .locator('div[role="menuitemcheckbox"] span.text-primary:has-text("思考研究")')
-      .first()
-    await item.waitFor({ state: 'visible', timeout: 3000 })
-    await item.click()
-    success('切换到思考研究模式')
+    if (THINK_MODE) {
+      const trigger = page.locator('button[aria-label="快速"]').first()
+      await trigger.waitFor({ state: 'visible', timeout: 3000 })
+      await trigger.click()
+      const item = page
+        .locator('div[role="menuitemcheckbox"] span.text-primary:has-text("思考研究")')
+        .first()
+      await item.waitFor({ state: 'visible', timeout: 3000 })
+      await item.click()
+      success('切换到思考研究模式')
+    }
   }
 
   async input(content: string): Promise<void> {
@@ -87,7 +91,10 @@ export default class AiQianWenEngine extends AiEngineBase {
           .waitFor({ state: 'visible', timeout: 0 })
         success('点击了发送按钮')
         await page
-          .locator('button[data-session-switch-target="send-query"][aria-label="发送消息"]')
+          .locator('#message-list-scroller')
+          .locator('[class^="message-select-wrapper-answer"]')
+          .last()
+          .locator('[data-answer-feedback-toolbar="true"] > .flex > .flex')
           .first()
           .waitFor({ state: 'visible', timeout: 0 })
         success('千问回答完毕')
@@ -99,7 +106,7 @@ export default class AiQianWenEngine extends AiEngineBase {
     const page = await getQianWenPage()
     const copyBtn = page
       .locator('#message-list-scroller')
-      .locator('.message-select-wrapper-answer-rqWekn')
+      .locator('[class^="message-select-wrapper-answer"]')
       .last()
       .locator('[data-answer-feedback-toolbar="true"] > .flex > .flex')
       .first()
@@ -113,5 +120,23 @@ export default class AiQianWenEngine extends AiEngineBase {
     })
     success(`获取到回答: ${summary(text)}`)
     return text
+  }
+
+  async inputAttach(files: File[]): Promise<void> {
+    const page = await getQianWenPage()
+    for (const file of files) {
+      const button = page.locator('button[aria-label="添加附件"]').first()
+      await button.waitFor({ state: 'visible', timeout: 5000 })
+      await button.click()
+      const item = page.locator('[role="menuitem"]:has-text("上传文档")').first()
+      await item.waitFor({ state: 'visible', timeout: 5000 })
+      const [chooser] = await Promise.all([page.waitForEvent('filechooser'), item.click()])
+      await chooser.setFiles({
+        name: file.name,
+        mimeType: file.type,
+        buffer: Buffer.from(await file.arrayBuffer()),
+      })
+      success(`已上传附件: ${file.name}`)
+    }
   }
 }

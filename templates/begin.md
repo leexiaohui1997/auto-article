@@ -33,6 +33,13 @@ interface Response {
   type: 'response'
   // 回复的内容，支持 Markdown
   message: string
+  // 回复的状态，
+  // ok 表示正常的回复，message 是最终可用的回复
+  // err 表示异常回复，message 表示当前异常的信息
+  // 其他字符创，也表示异常，某些节点可能要求你作出异常回复时，使用特定的 status 字符串以便判断
+  status: 'ok' | 'err' | string
+  // 回复数据，一些问题可能要求你在最终作答时，在此字段携带可直接使用的数据
+  data?: any
 }
 ```
 
