@@ -16,9 +16,7 @@ export default defineConfig([
       ecmaVersion: 2022,
       globals: globals.node,
     },
-    rules: {
-      complexity: ['warn', { max: 10 }],
-    },
+    rules: {},
   },
 
   // 所有 TS 文件的基线规则
@@ -26,7 +24,6 @@ export default defineConfig([
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     rules: {
-      complexity: ['warn', { max: 10 }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

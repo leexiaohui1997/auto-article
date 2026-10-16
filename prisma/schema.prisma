@@ -65,6 +65,7 @@ model ShareLinkFile {
 
   link   ShareLink        @relation(fields: [linkId], references: [id], onDelete: Cascade)
   folder ShareLinkFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  books  Book[]
 }
 
 // 书籍表
@@ -79,4 +80,6 @@ model Book {
   createdAt    DateTime  @default(now())
   doneAt       DateTime?
   processingAt DateTime?
+
+  file ShareLinkFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 }

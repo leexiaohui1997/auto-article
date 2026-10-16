@@ -2,11 +2,13 @@ import { LinkType, ShareLinkFile, Status } from '@prisma/client'
 
 import { getDB } from '../utils/db.js'
 import { NoLinkError } from '../utils/error.js'
-import { func, info } from '../utils/logger.js'
+import { error, func, info, success } from '../utils/logger.js'
 
 import { ai } from './ai/dispatch.js'
 import { scanQuarkFolder, scanQuarkLink } from './context/quark.js'
 import { BOOK_COUNT_PER_LOOP, getPendingBook, getPendingFiles } from './db.js'
+
+export const SOP_SCORE_MIN = 15
 
 export async function runMain() {
   let book = await getPendingBook()
@@ -14,6 +16,8 @@ export async function runMain() {
     await addBooks()
     book = await getPendingBook()
   }
+
+  console.log({ book })
 }
 
 export async function addBooks() {
@@ -40,9 +44,38 @@ export async function addBooks() {
     }
   }
 
-  for (const file of collected) {
-    await ai.getScore(file)
-  }
+  const results = await ai.getScore(collected)
+  const db = await getDB()
+  await db.$transaction(async (tx) => {
+    for (let i = 0; i < results.length; i++) {
+      const res = results[i]
+      const file = collected[i]
+      let isSuccess = false
+      if (res.verdict === 'go' || res.verdict === 'trial') {
+        await tx.book.create({
+          data: {
+            fileId: file.id,
+            name: res.bookName,
+            score: res.score,
+            reason: res.reason,
+            sopResult: JSON.stringify(res),
+          },
+        })
+        isSuccess = true
+      }
+
+      const status: Status = isSuccess ? Status.SUCCESS : Status.FAILED
+      const action = isSuccess ? '可做' : '弃做'
+      const method = isSuccess ? success : error
+
+      await tx.shareLinkFile.update({
+        where: { id: file.id },
+        data: { status },
+      })
+
+      method(`《${res.bookName}》评估结果：${res.score} 分，${action}`)
+    }
+  })
 }
 
 export async function scanFolder() {

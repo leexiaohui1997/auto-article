@@ -17,6 +17,9 @@ export type AiResponse<T = any> = AiNormalResponse<T> | AiUseToolResponse
 /** 推荐等级：强烈推荐直接做 / 边缘，建议试写一篇再定 / 不建议做 */
 export type SelectionRecommendLevel = 'strong' | 'trial' | 'reject'
 
+/** 判读：做（≥14 分）/ 试写（10~13 分）/ 弃（<10 分或命中否决项）/ 信息不足，不打分 */
+export type SelectionVerdict = 'go' | 'trial' | 'drop' | 'unknown'
+
 export type SelectionVetoCheck = {
   /** 否决项序号，固定 1~10 */
   id: number
@@ -61,6 +64,10 @@ export type SelectionSOPResult = {
   bookName: string
   /** 评分，满分 20 */
   score: number
+  /** 判读，与批量模式同枚举 */
+  verdict: SelectionVerdict
+  /** 一句话结论；命中否决项写"命中否决项：xxx"，主要风险也折进这一句 */
+  reason: string
   conclusion: SelectionConclusion
   /** 否决项检查，固定 10 条 */
   vetoChecks: SelectionVetoCheck[]
@@ -68,6 +75,6 @@ export type SelectionSOPResult = {
   scorecard?: SelectionScoreItem[]
   /** 爆款潜力点；命中否决项时可整体省略 */
   potential?: SelectionPotential
-  /** 主要风险，1~3 条 */
+  /** 主要风险，至少 1 条，条数不限 */
   risks: string[]
 }

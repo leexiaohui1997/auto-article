@@ -3,29 +3,35 @@ import { ShareLinkFile } from '@prisma/client'
 import { getErrorMsg } from '../../utils/common.js'
 import { AiResponseError, AppError } from '../../utils/error.js'
 import { func, success } from '../../utils/logger.js'
-import { renderTemplate, renderToAttach } from '../template/index.js'
+import { renderToAttach } from '../template/index.js'
 
 import AiQianWenEngine from './engines/qianwen.js'
 import { checkIsNormalResponse, checkIsSelectionSOPResult, checkIsValidResponse } from './helper.js'
 import { AiNormalResponse, AiResponse, SelectionSOPResult } from './types.js'
 
+export type QuestionFunc = (stop: () => void) => Promise<unknown>
+
 export class AiDispatch {
   engine = new AiQianWenEngine()
 
-  // eslint-disable-next-line complexity
   async ask<T = any>(
-    question: string,
+    question: string | string[],
     opts?: {
       attaches?: File[]
       onResult?: (res: AiNormalResponse<T>) => unknown
     },
-  ): Promise<AiNormalResponse<T>> {
+  ): Promise<AiNormalResponse<T>[]> {
+    const questions = (Array.isArray(question) ? [...question] : [question]).filter(Boolean)
+    if (!questions.length) throw new AppError('请输入问题')
+
     await this.engine.ensureLogin()
     await this.engine.createContext()
-    await this.engine.input(await renderTemplate('begin'))
+    await this.engine.inputAttach([await renderToAttach('begin', '本会话交流约定.md')])
+    await this.engine.input('如果你已经完全理解了约定，请按规范回复且只回复“OK”')
     await this.engine.send()
 
     let sendedQuestion = false
+    const anwsers: AiNormalResponse<T>[] = []
 
     while (true) {
       let resJson: AiResponse
@@ -47,7 +53,7 @@ export class AiDispatch {
         if (opts?.attaches?.length) {
           await this.engine.inputAttach(opts.attaches)
         }
-        await this.engine.input(question)
+        await this.engine.input(questions.shift()!)
         await this.engine.send()
         sendedQuestion = true
         continue
@@ -72,7 +78,14 @@ export class AiDispatch {
             throw err
           }
         }
-        return resJson
+
+        anwsers.push(resJson)
+        if (questions.length) {
+          await this.engine.input(questions.shift()!)
+          await this.engine.send()
+          continue
+        }
+        return anwsers
       }
 
       await this.engine.input('暂不支持工具调用')
@@ -80,21 +93,25 @@ export class AiDispatch {
     }
   }
 
-  async getScore(file: ShareLinkFile) {
-    func(`为 ${file.name} 打分`)
-    const anwser = await this.ask<SelectionSOPResult>(
-      `请遵照附件指南为此书做评估报告：${file.name}`,
+  async getScore(files: ShareLinkFile[]) {
+    func(`为 ${files.length} 本书打分`)
+    const anwsers = await this.ask<SelectionSOPResult>(
+      files.map((file) => `请遵照《选书评估 SOP.md》为此书做评估报告：${file.name}`),
       {
         attaches: [await renderToAttach('selection-sop', '选书评估 SOP.md')],
         onResult: async (res) => {
-          if (!checkIsSelectionSOPResult(res.data)) {
-            throw new AiResponseError('你提供的评估结果不符合文档要求的结构规范，请调整后重新回复')
+          const reasons: string[] = []
+          if (!checkIsSelectionSOPResult(res.data, (r) => reasons.push(r))) {
+            const c = reasons.map((v, i) => `${i + 1}. ${v}`).join('\r\n')
+            throw new AiResponseError(
+              `你提供的评估结果不符合以下文档要求的结构规范，请调整后重新提供符合要求的结构：\r\n${c}`,
+            )
           }
           success('评估结果已通过数据结构校验')
         },
       },
     )
-    return anwser.data!
+    return anwsers.map((item) => item.data!)
   }
 }
 

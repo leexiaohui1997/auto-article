@@ -96,7 +96,7 @@ export default class AiQianWenEngine extends AiEngineBase {
           .last()
           .locator('[data-answer-feedback-toolbar="true"] > .flex > .flex')
           .first()
-          .waitFor({ state: 'visible', timeout: 0 })
+          .waitFor({ state: 'attached', timeout: 0 })
         success('千问回答完毕')
       })(),
     ])
@@ -110,7 +110,8 @@ export default class AiQianWenEngine extends AiEngineBase {
       .last()
       .locator('[data-answer-feedback-toolbar="true"] > .flex > .flex')
       .first()
-    await copyBtn.waitFor({ state: 'visible', timeout: 3000 })
+    await copyBtn.waitFor({ state: 'attached', timeout: 3000 })
+    await copyBtn.scrollIntoViewIfNeeded({ timeout: 3000 })
     await copyBtn.dispatchEvent('mouseover')
     const copyItem = page.locator('[role="menuitem"]:has-text("复制为Markdown")').first()
     await copyItem.waitFor({ state: 'visible', timeout: 3000 })
